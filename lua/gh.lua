@@ -7,14 +7,32 @@ local function switch_to(path, label)
   vim.notify("Switched to " .. label)
 end
 
+local function find_existing_worktree(base_path, branch)
+  local out = vim.fn.system({ "git", "-C", base_path, "worktree", "list", "--porcelain" })
+  if vim.v.shell_error ~= 0 then return nil end
+  local target = "branch refs/heads/" .. branch
+  local current
+  for line in out:gmatch("[^\n]+") do
+    local p = line:match("^worktree (.+)$")
+    if p then current = p
+    elseif line == target then return current end
+  end
+  return nil
+end
+
 local function add_worktree(base_path, wt_path, branch, label)
+  local existing = find_existing_worktree(base_path, branch)
+  if existing then
+    switch_to(existing, label)
+    return
+  end
+
   vim.fn.jobstart({ "git", "worktree", "add", wt_path, branch }, {
     cwd = base_path,
     on_exit = function(_, code)
       if code == 0 then
         vim.schedule(function() switch_to(wt_path, label) end)
       else
-        -- Branch may only exist on remote, try tracking it
         vim.fn.jobstart({ "git", "worktree", "add", "--track", "-b", branch, wt_path, "origin/" .. branch }, {
           cwd = base_path,
           on_exit = function(_, c)
