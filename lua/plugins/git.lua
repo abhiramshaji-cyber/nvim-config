@@ -46,13 +46,9 @@ return {
       require("telescope").load_extension("repo")
     end,
     keys = {
-      { "<leader>fp", function()
-          require("telescope").extensions.repo.list({ search_dirs = { "~/Documents/GitHub" } })
-        end,
-        desc = "Local Projects",
-      },
-      { "<leader>fg", function() require("plugins.gh").pick() end, desc = "GitHub Repos" },
-      { "<leader>fw", function() require("plugins.gh").worktrees() end, desc = "Switch Worktree" },
+      { "<leader>fp", function() require("gh").pick_local() end,   desc = "Local Projects" },
+      { "<leader>fg", function() require("gh").pick() end,         desc = "GitHub Repos" },
+      { "<leader>fw", function() require("gh").worktrees() end,    desc = "Switch Worktree" },
     },
   },
 }

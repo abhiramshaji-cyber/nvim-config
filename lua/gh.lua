@@ -155,6 +155,53 @@ local function pick_branch_or_pr(repo_full, name)
   }):find()
 end
 
+local github_dir_expanded = vim.fn.expand("~/Documents/GitHub")
+
+local function open_local_picker(title, on_select)
+  local actions     = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  require("telescope").extensions.repo.list({
+    prompt_title   = title,
+    search_dirs    = { github_dir_expanded },
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        actions.close(prompt_bufnr)
+        local entry = action_state.get_selected_entry()
+        if entry then on_select(entry.value) end
+      end)
+      return true
+    end,
+  })
+end
+
+function M.pick_local()
+  open_local_picker("Local Projects", function(path)
+    vim.cmd("cd " .. vim.fn.fnameescape(path))
+    vim.notify("Switched to " .. path)
+  end)
+end
+
+function M.copy_path()
+  open_local_picker("Copy Full Path", function(path)
+    vim.fn.setreg("+", path)
+    vim.notify("Copied: " .. path)
+  end)
+end
+
+function M.open_in_finder()
+  open_local_picker("Open in Finder", function(path)
+    vim.fn.jobstart({ "open", path })
+  end)
+end
+
+function M.git_diff()
+  open_local_picker("Git Diff", function(path)
+    vim.cmd("cd " .. vim.fn.fnameescape(path))
+    vim.cmd("DiffviewOpen")
+  end)
+end
+
 function M.pick()
   local cmd = "{ gh repo list --json nameWithOwner --limit 200; for org in $(gh api user/orgs --jq '.[].login' 2>/dev/null); do gh repo list \"$org\" --json nameWithOwner --limit 200 2>/dev/null; done; } 2>/dev/null | jq -s 'add | unique_by(.nameWithOwner)'"
   local handle = io.popen(cmd)
