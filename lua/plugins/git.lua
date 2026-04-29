@@ -8,8 +8,8 @@ return {
     },
     cmd = "Neogit",
     keys = {
-      { "<leader>gs", "<cmd>Neogit<cr>",               desc = "Git Status" },
-      { "<leader>gb", "<cmd>Neogit branch<cr>",        desc = "Git Branches" },
+      { "<leader>gs", "<cmd>Neogit<cr>", desc = "Git Status" },
+      { "<leader>gb", "<cmd>Neogit branch<cr>", desc = "Git Branches" },
     },
     opts = {
       integrations = { diffview = true, telescope = true },
@@ -19,8 +19,8 @@ return {
     "sindrets/diffview.nvim",
     cmd = { "DiffviewOpen", "DiffviewFileHistory" },
     keys = {
-      { "<leader>gd", "<cmd>DiffviewOpen<cr>",         desc = "Diff View" },
-      { "<leader>gh", "<cmd>DiffviewFileHistory<cr>",  desc = "File History" },
+      { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diff View" },
+      { "<leader>gH", "<cmd>DiffviewFileHistory<cr>", desc = "File History" },
     },
   },
   {
@@ -31,10 +31,10 @@ return {
     },
     cmd = "Octo",
     keys = {
-      { "<leader>gp", "<cmd>Octo pr list<cr>",         desc = "PR List" },
-      { "<leader>gc", "<cmd>Octo pr checkout<cr>",     desc = "Checkout PR" },
-      { "<leader>gr", "<cmd>Octo repo create<cr>",     desc = "Create Repo" },
-      { "<leader>gP", "<cmd>Octo pr create<cr>",       desc = "Create PR" },
+      { "<leader>gp", "<cmd>Octo pr list<cr>", desc = "PR List" },
+      { "<leader>gc", "<cmd>Octo pr checkout<cr>", desc = "Checkout PR" },
+      { "<leader>gr", "<cmd>Octo repo create<cr>", desc = "Create Repo" },
+      { "<leader>gP", "<cmd>Octo pr create<cr>", desc = "Create PR" },
     },
     opts = {},
   },
@@ -46,9 +46,27 @@ return {
       require("telescope").load_extension("repo")
     end,
     keys = {
-      { "<leader>fp", function() require("gh").pick_local() end,   desc = "Local Projects" },
-      { "<leader>fg", function() require("gh").pick() end,         desc = "GitHub Repos" },
-      { "<leader>fw", function() require("gh").worktrees() end,    desc = "Switch Worktree" },
+      {
+        "<leader>fp",
+        function()
+          require("gh").pick_local()
+        end,
+        desc = "Local Projects",
+      },
+      {
+        "<leader>fg",
+        function()
+          require("gh").pick()
+        end,
+        desc = "GitHub Repos",
+      },
+      {
+        "<leader>fw",
+        function()
+          require("gh").worktrees()
+        end,
+        desc = "Switch Worktree",
+      },
     },
   },
 }

@@ -1,38 +1,33 @@
 return {
   "folke/snacks.nvim",
   keys = {
-    { "<leader>h", "<cmd>Dashboard<cr>", desc = "Home" },
+    {
+      "<leader>h",
+      function()
+        require("snacks").dashboard()
+      end,
+      desc = "Home",
+    },
   },
   opts = {
     dashboard = {
       preset = {
         header = table.concat({
-          "██████╗ ██╗     ██╗   ██╗ ██████╗" .. " ",
-          "██╔══██╗██║     ██║   ██║██╔════╝" .. " ",
-          "██████╔╝██║     ██║   ██║██║  ███╗",
-          "██║     ███████╗╚██████╔╝╚██████╔╝",
-          "╚═╝     ╚══════╝ ╚═════╝  ╚═════╝" .. " ",
-          "",
-          " █████╗  ███╗   ██╗ ██████╗ ",
-          "██╔══██╗ ████╗  ██║ ██╔══██╗",
-          "███████║ ██╔██╗ ██║ ██║  ██║",
-          "██╔══██║ ██║╚██╗██║ ██║  ██║",
-          "██║  ██║ ██║ ╚████║ ██████╔╝",
-          "╚═╝  ╚═╝ ╚═╝  ╚═══╝ ╚═════╝ ",
-          "",
-          "██████╗ ██████╗  █████╗ ██╗   ██╗",
-          "██╔══██╗██╔══██╗██╔══██╗╚██╗ ██╔╝",
-          "██████╔╝██████╔╝███████║ ╚████╔╝" .. " ",
-          "██╔═══╝ ██╔══██╗██╔══██║  ╚██╔╝" .. "  ",
-          "╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝" .. "   ",
+          "██████╗ ███████╗██╗     ██╗██╗   ██╗███████╗██████╗ ██╗   ██╗",
+          "██╔══██╗██╔════╝██║     ██║██║   ██║██╔════╝██╔══██╗╚██╗ ██╔╝",
+          "██║  ██║█████╗  ██║     ██║██║   ██║█████╗  ██████╔╝ ╚████╔╝ ",
+          "██║  ██║██╔══╝  ██║     ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗  ╚██╔╝  ",
+          "██████╔╝███████╗███████╗██║ ╚████╔╝ ███████╗██║  ██║   ██║   ",
+          "╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝   ╚═╝   ",
         }, "\n"),
         keys = {
-          { icon = " ", key = "p", desc = "Local Projects",  action = ":lua require('gh').pick_local()" },
-          { icon = " ", key = "g", desc = "GitHub Repos",    action = ":lua require('gh').pick()" },
-          { icon = " ", key = "y", desc = "Copy Full Path",  action = ":lua require('gh').copy_path()" },
-          { icon = " ", key = "e", desc = "Open in Finder",  action = ":lua require('gh').open_in_finder()" },
-          { icon = " ", key = "d", desc = "Git Diff",        action = ":lua require('gh').git_diff()" },
-          { icon = " ", key = "q", desc = "Quit",            action = ":qa" },
+          { icon = " ", key = "p", desc = "Local Projects", action = ":lua require('gh').pick_local()" },
+          { icon = " ", key = "g", desc = "GitHub Repos", action = ":lua require('gh').pick()" },
+          { icon = " ", key = "y", desc = "Copy Full Path", action = ":lua require('gh').copy_path()" },
+          { icon = " ", key = "e", desc = "Open in Finder", action = ":lua require('gh').open_in_finder()" },
+          { icon = " ", key = "t", desc = "My Todos", action = ":lua require('gh').linear_todos()" },
+          { icon = " ", key = "d", desc = "Git Diff", action = ":lua require('gh').git_diff()" },
+          { icon = " ", key = "q", desc = "Quit", action = ":qa" },
         },
       },
     },
