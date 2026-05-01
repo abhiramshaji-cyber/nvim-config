@@ -16,7 +16,7 @@ return {
           win = {
             list = {
               keys = {
-                ["T"] = function(_win)
+                ["n"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
                   local picker = pickers and pickers[1]
                   if not picker then return end
@@ -37,7 +37,7 @@ return {
                     "-e", "end tell",
                   }, {})
                 end,
-                ["W"] = function(_win)
+                ["w"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
                   local picker = pickers and pickers[1]
                   if not picker then return end
