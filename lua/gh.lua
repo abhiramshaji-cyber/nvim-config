@@ -607,10 +607,13 @@ function M.open_in_finder()
 end
 
 function M.git_diff()
-  open_local_picker("Git Diff", function(path)
-    switch_to(path, path)
-    vim.cmd("DiffviewOpen")
-  end)
+  local cwd = vim.fn.getcwd()
+  local out = vim.fn.system({ "git", "-C", cwd, "rev-parse", "--git-dir" })
+  if vim.v.shell_error ~= 0 then
+    vim.notify("No directory opened", vim.log.levels.WARN)
+    return
+  end
+  vim.cmd("DiffviewOpen")
 end
 
 -- ============================================================
