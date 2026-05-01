@@ -5,7 +5,7 @@ local cache_dir = vim.fn.stdpath("cache") .. "/gh"
 vim.fn.mkdir(cache_dir, "p")
 
 -- Extra GitHub orgs/users not returned by `gh api user/orgs`
-local extra_orgs = { "iolotech" }
+local extra_orgs = { "iolotech", "botpress" }
 
 -- Background refresh interval (ms). 5 min = 300_000.
 local AUTO_REFRESH_MS = 300000
