@@ -51,7 +51,7 @@ return {
                     "-e", 'tell application "System Events"',
                     "-e", '  tell process "ghostty"',
                     "-e", '    keystroke "n" using {command down}',
-                    "-e", "    delay 0.3",
+                    "-e", "    delay 0.8",
                     "-e", '    keystroke "cd " & quote & "' .. dir .. '" & quote',
                     "-e", "    keystroke return",
                     "-e", "  end tell",
