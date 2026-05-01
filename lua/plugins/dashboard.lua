@@ -35,7 +35,7 @@ return {
                     "-e", "    keystroke return",
                     "-e", "  end tell",
                     "-e", "end tell",
-                  }, {})
+                  })
                 end,
                 ["w"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
@@ -56,7 +56,7 @@ return {
                     "-e", "    keystroke return",
                     "-e", "  end tell",
                     "-e", "end tell",
-                  }, {})
+                  })
                 end,
                 ["t"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
