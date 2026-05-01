@@ -606,6 +606,20 @@ function M.open_in_finder()
   end)
 end
 
+function M.open_in_github()
+  local cwd = vim.fn.getcwd()
+  local remote = vim.fn.system({ "git", "-C", cwd, "remote", "get-url", "origin" })
+  if vim.v.shell_error ~= 0 then
+    vim.notify("No directory opened", vim.log.levels.WARN)
+    return
+  end
+  remote = remote:gsub("%s+$", "")
+  local url = remote
+    :gsub("^git@github%.com:", "https://github.com/")
+    :gsub("%.git$", "")
+  vim.fn.jobstart({ "open", url })
+end
+
 function M.git_diff()
   local cwd = vim.fn.getcwd()
   local out = vim.fn.system({ "git", "-C", cwd, "rev-parse", "--git-dir" })
