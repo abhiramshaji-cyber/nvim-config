@@ -749,6 +749,12 @@ def clean(value):
     return str(value).replace("|", " ").replace("\n", " ").replace("\r", " ")
 
 
+def clean_desc(value):
+    if value is None:
+        return ""
+    return str(value).replace("|", " ").replace("\r\n", "\\n").replace("\r", "\\n").replace("\n", "\\n")
+
+
 api_key = None
 try:
     with open(ENV_PATH, "r", encoding="utf-8") as env_file:
@@ -802,6 +808,7 @@ for issue in nodes:
         clean(issue.get("priority")),
         clean(state.get("name")),
         clean(project.get("name")) if project else "__NONE__",
+        clean_desc(issue.get("description")),
     ]))
 ]=], request_tmp))
     script_file:close()
@@ -827,12 +834,13 @@ for issue in nodes:
       if #fields >= 6 then
         local project = fields[6] ~= "__NONE__" and { name = fields[6] } or nil
         table.insert(nodes, {
-          identifier = fields[1],
-          title = fields[2],
-          url = fields[3],
-          priority = tonumber(fields[4]) or 0,
-          state = { name = fields[5] },
-          project = project,
+          identifier  = fields[1],
+          title       = fields[2],
+          url         = fields[3],
+          priority    = tonumber(fields[4]) or 0,
+          state       = { name = fields[5] },
+          project     = project,
+          description = fields[7] or "",
         })
       end
     end
@@ -854,7 +862,7 @@ function M.linear_todos()
         first: 50
         orderBy: updatedAt
       ) {
-        nodes { identifier title url priority state { name } project { name } }
+        nodes { identifier title url priority description state { name } project { name } }
       }
     }
   ]]
@@ -879,22 +887,64 @@ function M.linear_todos()
       local proj = issue.project and ("  " .. issue.project.name) or ""
       local state = issue.state and issue.state.name or "?"
       items[#items + 1] = {
-        display  = p .. "  " .. issue.identifier .. "  " .. issue.title .. proj .. "  (" .. state .. ")",
-        ordinal  = issue.identifier .. " " .. issue.title,
-        url      = issue.url,
-        id       = issue.identifier,
+        display      = p .. "  " .. issue.identifier .. "  " .. issue.title .. proj .. "  (" .. state .. ")",
+        ordinal      = issue.identifier .. " " .. issue.title,
+        url          = issue.url,
+        id           = issue.identifier,
+        title        = issue.title,
+        description  = issue.description or "",
+        project_name = issue.project and issue.project.name or nil,
+        state_name   = state,
+        priority     = issue.priority or 0,
       }
     end
 
     vim.schedule(function()
-      local pickers = require("telescope.pickers")
-      local finders = require("telescope.finders")
-      local conf    = require("telescope.config").values
-      local actions = require("telescope.actions")
-      local astate  = get_action_state()
+      local pickers    = require("telescope.pickers")
+      local finders    = require("telescope.finders")
+      local previewers = require("telescope.previewers")
+      local conf       = require("telescope.config").values
+      local actions    = require("telescope.actions")
+      local astate     = get_action_state()
+
+      local prio_label = { [0] = "No priority", [1] = "Urgent", [2] = "High", [3] = "Medium", [4] = "Low" }
+
+      local function build_todo_preview_lines(item)
+        local lines = { "# " .. item.id, "", item.title, "", "---", "" }
+        if item.project_name then
+          table.insert(lines, "**Project:** " .. item.project_name)
+        end
+        table.insert(lines, "**State:** " .. (item.state_name or "?"))
+        table.insert(lines, "**Priority:** " .. (prio_label[item.priority] or "?"))
+        if item.description and item.description ~= "" then
+          table.insert(lines, "")
+          table.insert(lines, "---")
+          table.insert(lines, "")
+          for _, part in ipairs(vim.split(item.description, "\\n", { plain = true })) do
+            table.insert(lines, part)
+          end
+        end
+        return lines
+      end
+
+      local todo_previewer = previewers.new_buffer_previewer({
+        title = "Issue Details",
+        define_preview = function(self, entry)
+          if not entry then return end
+          local lines = build_todo_preview_lines(entry.value)
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          vim.bo[self.state.bufnr].filetype         = "markdown"
+          vim.wo[self.state.winid].wrap             = true
+          vim.wo[self.state.winid].linebreak        = true
+          vim.wo[self.state.winid].conceallevel     = 2
+        end,
+      })
 
       pickers.new({}, {
-        prompt_title = "My Linear Todos (" .. #items .. ")",
+        prompt_title    = "My Linear Todos (" .. #items .. ")",
+        previewer       = todo_previewer,
+        layout_strategy = "horizontal",
+        layout_config   = { preview_width = 0.55 },
         finder = finders.new_table({
           results = items,
           entry_maker = function(e)
@@ -909,6 +959,307 @@ function M.linear_todos()
             if not entry then return end
             vim.fn.jobstart({ "open", entry.value.url })
             vim.notify("Opening " .. entry.value.id)
+          end)
+          return true
+        end,
+      }):find()
+    end)
+  end)
+end
+
+-- ============================================================
+-- Linear projects
+-- ============================================================
+
+local function show_project_details(project)
+  local health_labels = {
+    onTrack  = "✓ On Track",
+    atRisk   = "⚠ At Risk",
+    offTrack = "✗ Off Track",
+  }
+
+  local date_str = project.last_date
+  if date_str and date_str ~= "" then
+    date_str = date_str:match("^(%d%d%d%d%-%d%d%-%d%d)") or date_str
+  else
+    date_str = "—"
+  end
+
+  local lines = { "# " .. project.name, "", "**Time Spent:** *coming soon*", "" }
+
+  if project.last_body and project.last_body ~= "" then
+    local health = health_labels[project.last_health] or project.last_health or ""
+    local meta = "**Last Update:** " .. date_str
+    if health ~= "" then meta = meta .. "  ·  " .. health end
+    table.insert(lines, "---")
+    table.insert(lines, "")
+    table.insert(lines, meta)
+    table.insert(lines, "")
+    for _, part in ipairs(vim.split(project.last_body, "\n", { plain = true })) do
+      table.insert(lines, part)
+    end
+  else
+    table.insert(lines, "---")
+    table.insert(lines, "")
+    table.insert(lines, "*No updates yet*  ·  " .. date_str)
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype   = "markdown"
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].bufhidden  = "wipe"
+
+  local win_w = math.min(math.max(72, #project.name + 6), math.floor(vim.o.columns * 0.75))
+  local win_h = math.floor(vim.o.lines * 0.78)
+  local row   = math.floor((vim.o.lines - win_h) / 2)
+  local col   = math.floor((vim.o.columns - win_w) / 2)
+
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative  = "editor",
+    width     = win_w,
+    height    = win_h,
+    row       = row,
+    col       = col,
+    style     = "minimal",
+    border    = "rounded",
+    title     = " Project Details ",
+    title_pos = "center",
+  })
+
+  vim.wo[win].wrap         = true
+  vim.wo[win].linebreak    = true
+  vim.wo[win].conceallevel = 2
+  vim.wo[win].scrolloff    = 4
+  vim.wo[win].cursorline   = true
+
+  for _, key in ipairs({ "q", "<Esc>" }) do
+    vim.keymap.set("n", key, function()
+      if vim.api.nvim_win_is_valid(win) then
+        vim.api.nvim_win_close(win, true)
+      end
+    end, { buffer = buf, silent = true, nowait = true })
+  end
+end
+
+local function linear_projects_async(callback)
+  vim.defer_fn(function()
+    local script_tmp = os.tmpname() .. ".py"
+    local sf = io.open(script_tmp, "w")
+    if not sf then
+      callback(nil, "cannot write temp script")
+      return
+    end
+
+    sf:write([=[
+import json, os, sys, urllib.error, urllib.request
+
+ENV_PATH = os.path.expanduser("~/.claude/skills/linear/.env")
+
+def fail(msg):
+    print("ERROR:" + str(msg).replace("\n", " ").replace("\r", " "))
+    sys.exit(0)
+
+api_key = None
+try:
+    with open(ENV_PATH) as f:
+        for line in f:
+            if line.startswith("LINEAR_API_KEY="):
+                api_key = line.split("=", 1)[1].strip()
+                break
+except OSError as e:
+    fail(e)
+if not api_key:
+    fail("LINEAR_API_KEY not found")
+
+query = """
+query {
+  projects(
+    filter: {
+      members: { id: { eq: "a3fd8099-5265-4f48-a3f8-639c70709b0d" } }
+      status: { type: { eq: "started" } }
+    }
+    first: 20
+    orderBy: updatedAt
+  ) {
+    nodes {
+      id name url
+      status { name }
+      projectUpdates(last: 1) {
+        nodes { body createdAt health }
+      }
+    }
+  }
+}
+"""
+
+body = json.dumps({"query": query}).encode()
+req = urllib.request.Request(
+    "https://api.linear.app/graphql", data=body,
+    headers={"Authorization": api_key, "Content-Type": "application/json"},
+    method="POST"
+)
+try:
+    with urllib.request.urlopen(req, timeout=20) as r:
+        payload = json.loads(r.read())
+except urllib.error.HTTPError as e:
+    fail("HTTP " + str(e.code) + ": " + e.read().decode(errors="replace")[:200])
+except Exception as e:
+    fail(e)
+
+if payload.get("errors"):
+    fail(payload["errors"][0].get("message", payload["errors"][0]))
+
+nodes = (((payload.get("data") or {}).get("projects") or {}).get("nodes") or [])
+out = []
+for p in nodes:
+    status = p.get("status") or {}
+    updates = (p.get("projectUpdates") or {}).get("nodes") or []
+    u = updates[0] if updates else {}
+    out.append({
+        "id":          p.get("id", ""),
+        "name":        p.get("name", ""),
+        "state":       status.get("name", ""),
+        "last_body":   u.get("body") or "",
+        "last_date":   u.get("createdAt") or "",
+        "last_health": u.get("health") or "",
+        "url":         p.get("url") or "",
+    })
+print(json.dumps(out))
+]=])
+    sf:close()
+
+    local raw = vim.fn.system({ "python3", script_tmp })
+    local shell_error = vim.v.shell_error
+    os.remove(script_tmp)
+
+    if shell_error ~= 0 then
+      callback(nil, "python failed (exit " .. shell_error .. ")")
+      return
+    end
+
+    -- check for error sentinel on first line
+    local first_line = raw:match("^([^\n]+)")
+    if first_line and first_line:sub(1, 6) == "ERROR:" then
+      callback(nil, first_line:sub(7))
+      return
+    end
+
+    local ok, decoded = pcall(vim.json.decode, raw)
+    if not ok or type(decoded) ~= "table" then
+      callback(nil, "failed to parse response")
+      return
+    end
+
+    callback(decoded, nil)
+  end, 0)
+end
+
+function M.linear_projects()
+  vim.notify("Fetching Linear projects…")
+
+  linear_projects_async(function(projects, err)
+    if err or not projects then
+      vim.schedule(function()
+        notify_error("Linear projects: " .. (err or "unknown error"))
+      end)
+      return
+    end
+
+    if #projects == 0 then
+      vim.schedule(function()
+        vim.notify("No in-progress projects found!")
+      end)
+      return
+    end
+
+    vim.schedule(function()
+      local pickers    = require("telescope.pickers")
+      local finders    = require("telescope.finders")
+      local previewers = require("telescope.previewers")
+      local conf       = require("telescope.config").values
+      local actions    = require("telescope.actions")
+      local astate     = get_action_state()
+
+      local health_labels = {
+        onTrack  = "✓ On Track",
+        atRisk   = "⚠ At Risk",
+        offTrack = "✗ Off Track",
+      }
+
+      local function build_preview_lines(p)
+        local date_str = p.last_date
+        if date_str and date_str ~= "" then
+          date_str = date_str:match("^(%d%d%d%d%-%d%d%-%d%d)") or date_str
+        else
+          date_str = "—"
+        end
+        local lines = { "# " .. p.name, "", "**Time Spent:** *coming soon*", "" }
+        if p.last_body and p.last_body ~= "" then
+          local health = health_labels[p.last_health] or p.last_health or ""
+          local meta = "**Last Update:** " .. date_str
+          if health ~= "" then meta = meta .. "  ·  " .. health end
+          table.insert(lines, "---")
+          table.insert(lines, "")
+          table.insert(lines, meta)
+          table.insert(lines, "")
+          for _, part in ipairs(vim.split(p.last_body, "\n", { plain = true })) do
+            table.insert(lines, part)
+          end
+        else
+          table.insert(lines, "---")
+          table.insert(lines, "")
+          table.insert(lines, "*No updates yet*  ·  " .. date_str)
+        end
+        return lines
+      end
+
+      local project_previewer = previewers.new_buffer_previewer({
+        title = "Last Update",
+        define_preview = function(self, entry)
+          if not entry then return end
+          local lines = build_preview_lines(entry.value.project)
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+          vim.bo[self.state.bufnr].filetype = "markdown"
+          vim.wo[self.state.winid].wrap         = true
+          vim.wo[self.state.winid].linebreak    = true
+          vim.wo[self.state.winid].conceallevel = 2
+        end,
+      })
+
+      local items = {}
+      for _, p in ipairs(projects) do
+        local ds = p.last_date
+        if ds and ds ~= "" then
+          ds = ds:match("^(%d%d%d%d%-%d%d%-%d%d)") or ds
+        else
+          ds = "no updates"
+        end
+        items[#items + 1] = {
+          display = "  " .. p.name .. "  " .. ds,
+          ordinal = p.name,
+          project = p,
+        }
+      end
+
+      pickers.new({}, {
+        prompt_title  = "My Projects (" .. #items .. ")",
+        previewer     = project_previewer,
+        layout_strategy = "horizontal",
+        layout_config = { preview_width = 0.55 },
+        finder = finders.new_table({
+          results = items,
+          entry_maker = function(e)
+            return { value = e, display = e.display, ordinal = e.ordinal }
+          end,
+        }),
+        sorter = conf.generic_sorter({}),
+        attach_mappings = function(prompt_bufnr)
+          actions.select_default:replace(function()
+            local entry = astate.get_selected_entry()
+            actions.close(prompt_bufnr)
+            if not entry then return end
+            show_project_details(entry.value.project)
           end)
           return true
         end,
