@@ -21,18 +21,42 @@ return {
                   local picker = pickers and pickers[1]
                   if not picker then return end
                   local item = picker:current()
-                  if not item or item.dir then return end
-                  picker:close()
-                  vim.cmd("tabedit " .. vim.fn.fnameescape(item.file))
+                  if not item then return end
+                  local dir = item.dir and item.file or vim.fn.fnamemodify(item.file, ":h")
+                  vim.fn.jobstart({
+                    "osascript",
+                    "-e", 'tell application "Ghostty" to activate',
+                    "-e", "delay 0.2",
+                    "-e", 'tell application "System Events"',
+                    "-e", '  tell process "ghostty"',
+                    "-e", '    keystroke "t" using {command down}',
+                    "-e", "    delay 0.3",
+                    "-e", '    keystroke "cd " & quote & "' .. dir .. '" & quote',
+                    "-e", "    keystroke return",
+                    "-e", "  end tell",
+                    "-e", "end tell",
+                  }, {})
                 end,
                 ["W"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
                   local picker = pickers and pickers[1]
                   if not picker then return end
                   local item = picker:current()
-                  if not item or item.dir then return end
-                  picker:close()
-                  vim.cmd("vsplit " .. vim.fn.fnameescape(item.file))
+                  if not item then return end
+                  local dir = item.dir and item.file or vim.fn.fnamemodify(item.file, ":h")
+                  vim.fn.jobstart({
+                    "osascript",
+                    "-e", 'tell application "Ghostty" to activate',
+                    "-e", "delay 0.2",
+                    "-e", 'tell application "System Events"',
+                    "-e", '  tell process "ghostty"',
+                    "-e", '    keystroke "n" using {command down}',
+                    "-e", "    delay 0.3",
+                    "-e", '    keystroke "cd " & quote & "' .. dir .. '" & quote',
+                    "-e", "    keystroke return",
+                    "-e", "  end tell",
+                    "-e", "end tell",
+                  }, {})
                 end,
                 ["t"] = function(_win)
                   local pickers = Snacks.picker.get({ source = "explorer" })
