@@ -274,7 +274,7 @@ local function refresh_branches_and_prs(repo_full, done)
 
   parallel({
     function(cb)
-      gh_lines_async({ "gh", "api", "repos/" .. repo_full .. "/branches", "--jq", ".[].name" }, cb)
+      gh_lines_async({ "gh", "api", "repos/" .. repo_full .. "/branches", "--paginate", "--jq", ".[].name" }, cb)
     end,
     function(cb)
       gh_json_async({ "gh", "pr", "list", "--repo", repo_full, "--json", "number,title" }, cb)
