@@ -115,6 +115,7 @@ return {
           { icon = " ", key = "e", desc = "Open in Finder", action = ":lua require('gh').open_in_finder()" },
           { icon = " ", key = "o", desc = "Open in GitHub", action = ":lua require('gh').open_in_github()" },
           { icon = " ", key = "t", desc = "My Todos", action = ":lua require('gh').linear_todos()" },
+          { icon = " ", key = "p", desc = "My Projects", action = ":lua require('gh').linear_projects()" },
           { icon = " ", key = "d", desc = "Git Diff", action = ":lua require('gh').git_diff()" },
           { icon = " ", key = "q", desc = "Quit", action = ":qa" },
         },
